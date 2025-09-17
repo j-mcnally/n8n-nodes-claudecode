@@ -35,6 +35,7 @@ This is an n8n community node that integrates Claude Code SDK into n8n workflows
    - Multiple output formats: structured JSON, messages array, or plain text
    - Streaming support with abort signal handling
    - Debug mode for troubleshooting
+   - Automatic cleanup when n8n workflow is stopped or cancelled
 
 4. **Project Path Support** (v0.2.0+)
    - Configure working directory via `projectPath` parameter

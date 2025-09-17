@@ -209,10 +209,31 @@ export class ClaudeCode implements INodeType {
 					debug?: boolean;
 				};
 
-				// Create abort controller for timeout
+				// Create abort controller that combines timeout and n8n's cancel signal
 				const abortController = new AbortController();
 				const timeoutMs = timeout * 1000;
 				const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+
+				// Get n8n's execution cancel signal and abort if it's already cancelled
+				const executionCancelSignal = this.getExecutionCancelSignal();
+				if (executionCancelSignal?.aborted) {
+					clearTimeout(timeoutId);
+					throw new NodeOperationError(this.getNode(), 'Execution was cancelled before starting', {
+						itemIndex,
+					});
+				}
+
+				// Listen for cancellation from n8n workflow stop
+				const onCancel = () => {
+					if (additionalOptions.debug) {
+						console.log('[ClaudeCode] Execution cancelled by n8n workflow stop');
+					}
+					abortController.abort();
+				};
+
+				if (executionCancelSignal) {
+					executionCancelSignal.addEventListener('abort', onCancel);
+				}
 
 				// Validate required parameters
 				if (!prompt || prompt.trim() === '') {
@@ -308,6 +329,11 @@ export class ClaudeCode implements INodeType {
 
 					clearTimeout(timeoutId);
 
+					// Clean up abort signal listener
+					if (executionCancelSignal) {
+						executionCancelSignal.removeEventListener('abort', onCancel);
+					}
+
 					const duration = Date.now() - startTime;
 					if (additionalOptions.debug) {
 						console.log(
@@ -376,6 +402,12 @@ export class ClaudeCode implements INodeType {
 					}
 				} catch (queryError) {
 					clearTimeout(timeoutId);
+
+					// Clean up abort signal listener
+					if (executionCancelSignal) {
+						executionCancelSignal.removeEventListener('abort', onCancel);
+					}
+
 					throw queryError;
 				}
 			} catch (error) {
