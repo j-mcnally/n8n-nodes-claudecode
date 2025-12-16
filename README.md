@@ -67,12 +67,15 @@ npm install @bilalmubarik/n8n-nodes-claudecode
 ```bash
 docker run -it --rm \
   -p 5678:5678 \
+  -e SHELL=/bin/bash \
+  -e ANTHROPIC_API_KEY=your_api_key_here \
   -e N8N_COMMUNITY_NODE_PACKAGES=@bilalmubarik/n8n-nodes-claudecode \
   -v ~/.n8n:/home/node/.n8n \
+  -v /path/to/your/projects:/projects \
   n8nio/n8n
 ```
 
-**Note**: For Docker, you'll need to ensure Claude Code CLI is installed inside the container. Consider creating a custom Dockerfile.
+**Important for Docker users**: The Claude Code SDK requires a properly configured shell environment. See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for detailed Docker setup instructions, including custom Dockerfiles and docker-compose configurations.
 
 📦 **NPM Package**: [@bilalmubarik/n8n-nodes-claudecode](https://www.npmjs.com/package/@bilalmubarik/n8n-nodes-claudecode)
 
@@ -116,6 +119,12 @@ Transform customer complaints into deployed fixes in minutes, not days.
 
 ## 🛠️ Powerful Features
 
+### **Claude 4-5 Models** (New in v0.3.0)
+Choose the right model for your task:
+- **Sonnet 4.5** (Recommended): Latest balanced model - excellent for most coding tasks with optimal speed and capability
+- **Opus 4.5**: Most capable model - ideal for highly complex tasks, deep analysis, and critical decision-making
+- **Haiku 4**: Fast and efficient - perfect for simple tasks, quick code generation, and rapid iterations
+
 ### **Project Context Awareness**
 Set a project path and Claude Code understands your entire codebase context:
 - Analyzes existing code patterns
@@ -132,12 +141,17 @@ Claude Code comes equipped with powerful tools:
 - 📊 **Database Access**: Via MCP servers
 - 🔗 **API Integration**: GitHub, Slack, and more via MCP
 
-### **Model Context Protocol (MCP)**
+### **Model Context Protocol (MCP)** (Enhanced in v0.3.1)
 Extend Claude Code with specialized capabilities:
 - PostgreSQL/MySQL database access
 - GitHub repository management
 - Slack workspace integration
 - Custom tool development
+
+**New:** Full support for loading MCP servers from:
+- **User-level**: `~/.claude.json` (your personal MCP servers available across all workflows)
+- **Project-level**: `.mcp.json` (project-specific MCP servers)
+- **Local**: `.claude/settings.local.json` (personal overrides, not shared with team)
 
 ## 📋 Configuration Examples
 
@@ -147,7 +161,7 @@ Extend Claude Code with specialized capabilities:
   "operation": "query",
   "prompt": "Analyze this codebase and suggest performance improvements",
   "projectPath": "/path/to/your/project",
-  "model": "sonnet"
+  "model": "sonnet"  // Claude Sonnet 4.5 - Latest model
 }
 ```
 
@@ -157,7 +171,7 @@ Extend Claude Code with specialized capabilities:
   "operation": "query",
   "prompt": "Create an optimized query to find users who haven't logged in for 30 days",
   "projectPath": "/path/to/project",
-  "model": "opus"
+  "model": "sonnet"  // Claude Sonnet 4.5 recommended for complex tasks
 }
 ```
 
@@ -167,7 +181,7 @@ Extend Claude Code with specialized capabilities:
   "operation": "query",
   "prompt": "Customer reports: 'Login button not working on mobile devices'\n\nAnalyze this issue, find the root cause, and create a fix",
   "projectPath": "/path/to/web-app",
-  "model": "opus",
+  "model": "sonnet",  // Claude Sonnet 4.5 - Best for complex debugging
   "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
   "additionalOptions": {
     "systemPrompt": "Focus on mobile compatibility issues. Check responsive CSS and JavaScript event handlers."
@@ -175,7 +189,44 @@ Extend Claude Code with specialized capabilities:
 }
 ```
 
-With MCP configuration (`.mcp.json`):
+### MCP Server Configuration (New in v0.3.1)
+
+#### Option 1: User-Level MCP Servers (Recommended)
+Configure MCP servers in `~/.claude.json` to use them across all n8n workflows:
+```json
+{
+  "projects": {
+    "/Users/yourname": {
+      "mcpServers": {
+        "postgres": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
+        },
+        "github": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-github"],
+          "env": {
+            "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Then in your n8n node:
+```javascript
+{
+  "operation": "query",
+  "prompt": "List all open issues in the repository",
+  "settingSources": ["user", "project", "local"],  // Default: loads all configs
+  "allowedTools": ["mcp__github__list_issues"]
+}
+```
+
+#### Option 2: Project-Level MCP Servers
+Create `.mcp.json` in your project directory:
 ```json
 {
   "mcpServers": {
@@ -242,7 +293,7 @@ If not installed, see the [Quick Start](#-quick-start) section above.
    - **Operation**: Query
    - **Prompt**: "Analyze the code in this directory and suggest improvements"
    - **Project Path**: `/path/to/your/project`
-   - **Model**: Sonnet (faster) or Opus (more powerful)
+   - **Model**: Sonnet 4.5 (recommended), Opus 4.5 (most capable), or Haiku 4 (fastest)
 5. Click **Execute Workflow**
 6. Watch Claude Code analyze your project!
 

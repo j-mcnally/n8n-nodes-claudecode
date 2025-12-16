@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Latest Updates (v0.3.1)
+- **NEW:** Added `settingSources` parameter to control MCP server and settings loading
+  - Enables loading user-level MCP servers from `~/.claude.json`
+  - Supports project-level and local settings
+  - Default: loads all sources (`user`, `project`, `local`)
+- Updated to claude-agent-sdk ^0.1.70
+- Added support for Claude 4-5 models:
+  - Sonnet 4.5 (recommended for most tasks)
+  - Opus 4.5 (most capable for complex tasks)
+  - Haiku 4 (fastest for simple tasks)
+
 ## Common Commands
 
 ### Development
@@ -29,7 +40,10 @@ This is an n8n community node that integrates Claude Code SDK into n8n workflows
 2. **Tool System**
    - Dynamic tool enabling/disabling based on user configuration
    - Supports: Bash, Edit/MultiEdit, Read/Write, Web operations, Todo management
-   - MCP servers supported via Claude's native configuration system (.claude/settings.local.json)
+   - MCP servers supported via `settingSources` parameter:
+     - **User-level**: Loads MCP servers from `~/.claude.json` and settings from `~/.claude/settings.json`
+     - **Project-level**: Loads from `.mcp.json` and `.claude/settings.json` in project directory
+     - **Local**: Loads from `.claude/settings.local.json` (gitignored personal settings)
 
 3. **Output Handling**
    - Multiple output formats: structured JSON, messages array, or plain text
@@ -82,5 +96,21 @@ Key configuration files:
 - `.mcp.json`: Defines available MCP servers (project root)
 - `.claude/settings.json`: Team-shared settings
 - `.claude/settings.local.json`: Personal settings (gitignored)
+- `~/.claude.json`: User-level MCP servers and global settings
+
+### MCP Server Loading via settingSources
+
+The `settingSources` parameter controls which configuration sources the SDK loads:
+
+- **`['user']`**: Loads only user-level configs (`~/.claude.json`, `~/.claude/settings.json`)
+- **`['project']`**: Loads only project configs (`.mcp.json`, `.claude/settings.json`)
+- **`['local']`**: Loads only local configs (`.claude/settings.local.json`)
+- **`['user', 'project', 'local']`**: Default - loads all configs (recommended)
+- **`[]`**: Isolation mode - no automatic config loading
+
+**Example:** To use your user-level MCP servers from `~/.claude.json`:
+1. Set `settingSources` to include `'user'` (enabled by default)
+2. The SDK will automatically load all MCP servers defined in `~/.claude.json`
+3. Use MCP tools via the `allowedTools` parameter (e.g., `mcp__filesystem__list_files`)
 
 When using Project Path, Claude Code automatically loads these configurations from the specified directory.

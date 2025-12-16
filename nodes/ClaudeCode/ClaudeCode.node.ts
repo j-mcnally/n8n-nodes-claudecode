@@ -63,18 +63,23 @@ export class ClaudeCode implements INodeType {
 				type: 'options',
 				options: [
 					{
-						name: 'Sonnet',
+						name: 'Sonnet 4.5 (Recommended)',
 						value: 'sonnet',
-						description: 'Fast and efficient model for most tasks',
+						description: 'Claude Sonnet 4.5 - Latest balanced model, excellent for most coding tasks',
 					},
 					{
-						name: 'Opus',
+						name: 'Opus 4.5',
 						value: 'opus',
-						description: 'Most capable model for complex tasks',
+						description: 'Claude Opus 4.5 - Most capable model for highly complex tasks and analysis',
+					},
+					{
+						name: 'Haiku 4',
+						value: 'haiku',
+						description: 'Claude Haiku 4 - Fast and efficient model for simpler tasks',
 					},
 				],
 				default: 'sonnet',
-				description: 'Claude model to use',
+				description: 'Claude model to use for code generation and analysis',
 			},
 			{
 				displayName: 'Max Turns',
@@ -151,6 +156,31 @@ export class ClaudeCode implements INodeType {
 				description: 'Select which built-in tools Claude Code is allowed to use during execution',
 			},
 			{
+				displayName: 'Setting Sources',
+				name: 'settingSources',
+				type: 'multiOptions',
+				options: [
+					{
+						name: 'User',
+						value: 'user',
+						description: 'Load user-level settings from ~/.claude/settings.JSON and MCP servers from ~/.claude.JSON'
+					},
+					{
+						name: 'Project',
+						value: 'project',
+						description: 'Load project settings from .claude/settings.JSON and .mcp.JSON'
+					},
+					{
+						name: 'Local',
+						value: 'local',
+						description: 'Load local settings from .claude/settings.local.JSON'
+					},
+				],
+				default: ['user', 'project', 'local'],
+				description: 'Choose which configuration sources to load. User-level includes MCP servers from ~/.claude.JSON.',
+				hint: 'Leave empty to run in isolation mode (no automatic MCP server loading)',
+			},
+			{
 				displayName: 'Additional Options',
 				name: 'additionalOptions',
 				type: 'collection',
@@ -203,6 +233,7 @@ export class ClaudeCode implements INodeType {
 				const projectPath = this.getNodeParameter('projectPath', itemIndex) as string;
 				const outputFormat = this.getNodeParameter('outputFormat', itemIndex) as string;
 				const allowedTools = this.getNodeParameter('allowedTools', itemIndex, []) as string[];
+				const settingSources = this.getNodeParameter('settingSources', itemIndex, ['user', 'project', 'local']) as Array<'user' | 'project' | 'local'>;
 				const additionalOptions = this.getNodeParameter('additionalOptions', itemIndex) as {
 					systemPrompt?: string;
 					requirePermissions?: boolean;
@@ -229,6 +260,7 @@ export class ClaudeCode implements INodeType {
 					console.log(`[ClaudeCode] Max turns: ${maxTurns}`);
 					console.log(`[ClaudeCode] Timeout: ${timeout}s`);
 					console.log(`[ClaudeCode] Allowed built-in tools: ${allowedTools.join(', ')}`);
+					console.log(`[ClaudeCode] Setting sources: ${settingSources.join(', ')}`);
 				}
 
 				// Build query options
@@ -242,6 +274,7 @@ export class ClaudeCode implements INodeType {
 						systemPrompt?: string;
 						mcpServers?: Record<string, any>;
 						allowedTools?: string[];
+						settingSources?: Array<'user' | 'project' | 'local'>;
 						continue?: boolean;
 						cwd?: string;
 					};
@@ -275,6 +308,14 @@ export class ClaudeCode implements INodeType {
 					queryOptions.options.allowedTools = allowedTools;
 					if (additionalOptions.debug) {
 						console.log(`[ClaudeCode] Allowed tools: ${allowedTools.join(', ')}`);
+					}
+				}
+
+				// Set setting sources if any are specified
+				if (settingSources.length > 0) {
+					queryOptions.options.settingSources = settingSources;
+					if (additionalOptions.debug) {
+						console.log(`[ClaudeCode] Setting sources: ${settingSources.join(', ')}`);
 					}
 				}
 
